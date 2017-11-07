@@ -9,8 +9,8 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.IBinder;
 import android.util.Log;
-import com.heytz.deli.MainActivity;
-import com.heytz.deli.R;
+import com.heytz.newsxapp.MainActivity;
+import com.heytz.newsxapp.R;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.*;
@@ -497,7 +497,9 @@ public class Service extends android.app.Service {
                 public void connectionLost(Throwable cause) {
                     connected = false;
                     Log.i("mqttalabs", cause.toString());
-
+                    if (isNetworkAvailable() == true) {
+                        reconnectIfNecessary();
+                    }
                 }
 
                 @Override
