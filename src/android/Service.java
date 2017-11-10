@@ -497,7 +497,9 @@ public class Service extends android.app.Service {
                 public void connectionLost(Throwable cause) {
                     connected = false;
                     Log.i("mqttalabs", cause.toString());
-
+                    if (isNetworkAvailable()) {
+                        reconnectIfNecessary();
+                    }
                 }
 
                 @Override
