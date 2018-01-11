@@ -459,7 +459,7 @@ public class Service extends android.app.Service {
         // Change the name of the notification here
         Notification n = new Notification.Builder(this)
                 .setDefaults(Notification.DEFAULT_ALL)
-                .setSmallIcon(R.drawable.icon)
+                .setSmallIcon(R.drawable.launcher_icon)
                 .setTicker(ticker)
                 .setContentTitle(title)
                 .setContentText(content)
