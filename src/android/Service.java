@@ -13,7 +13,7 @@ import com.heytz.delinb.MainActivity;
 import com.heytz.delinb.R;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.json.*;
+import org.json.JSONObject;
 
 import java.io.IOException;
 
@@ -75,7 +75,7 @@ public class Service extends android.app.Service {
 
     // This the application level keep-alive interval, that is used by the AlarmManager
     // to keep the connection active, even when the device goes to sleep.
-    private static final long KEEP_ALIVE_INTERVAL = 1000 * 60 * 28;
+    private static final long KEEP_ALIVE_INTERVAL = 1000 * 30;
 
     // Retry intervals, when the connection is lost.
     private static final long INITIAL_RETRY_INTERVAL = 1000 * 10;
@@ -193,7 +193,7 @@ public class Service extends android.app.Service {
         } else if (intent.getAction().equals(ACTION_START) == true) {
             start();
         } else if (intent.getAction().equals(ACTION_KEEPALIVE) == true) {
-            keepAlive();
+            //keepAlive();
         } else if (intent.getAction().equals(ACTION_RECONNECT) == true) {
             if (isNetworkAvailable()) {
                 reconnectIfNecessary();
@@ -312,31 +312,23 @@ public class Service extends android.app.Service {
 //        }
     }
 
-    private synchronized void keepAlive() {
-//        try {
-        // Send a keep alive, if there is a connection.
-//            if (mStarted == true && mConnection != null) {
-//                mConnection.sendKeepAlive();
-//            }
-//        } catch (MqttException e) {
-//            log("MqttException: " + (e.getMessage() != null ? e.getMessage() : "NULL"), e);
-
-//            mConnection.disconnect();
-//            mConnection = null;
-//            cancelReconnect();
-//        }
-    }
 
     // Schedule application level keep-alives using the AlarmManager
-    private void startKeepAlives() {
-        Intent i = new Intent();
-        i.setClass(this, Service.class);
-        i.setAction(ACTION_KEEPALIVE);
-        PendingIntent pi = PendingIntent.getService(this, 0, i, 0);
-        AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);
-        alarmMgr.setRepeating(AlarmManager.RTC_WAKEUP,
-                System.currentTimeMillis() + KEEP_ALIVE_INTERVAL,
-                KEEP_ALIVE_INTERVAL, pi);
+    private void startKeepAlives(final MqttAsyncClient client, final String clientId) {
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    while (client.isConnected()) {
+                        sleep(30000);
+                        MqttMessage aliveMessage = new MqttMessage();
+                        client.publish(clientId, aliveMessage);
+                    }
+                } catch (Exception e) {
+                    log("MqttException: " + (e.getMessage() != null ? e.getMessage() : "NULL"), e);
+                }
+            }
+        }.start();
     }
 
     // Remove all scheduled keep alives
@@ -484,7 +476,7 @@ public class Service extends android.app.Service {
         final MqttConnectOptions connOpts = new MqttConnectOptions();
         connected = false;
         try {
-            String clientId = client.generateClientId();
+            final String clientId = client.generateClientId();
             String willTopic = MQTT_WILL_TOPIC;
             String willPayload = "TEST";
             boolean willRetain = false;
@@ -538,7 +530,7 @@ public class Service extends android.app.Service {
                 public void onSuccess(IMqttToken asyncActionToken) {
                     connected = true;
                     subscribe(MQTT_TOPIC + "/#");
-
+                    startKeepAlives(client, clientId);
                 }
 
                 @Override
