@@ -1,6 +1,5 @@
 package com.heytz.pushService;
 
-import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -8,6 +7,8 @@ import android.content.*;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.IBinder;
+import android.os.PowerManager;
+import android.os.PowerManager.WakeLock;
 import android.util.Log;
 import com.heytz.delinb.MainActivity;
 import com.heytz.delinb.R;
@@ -16,6 +17,8 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 //import com.ibm.mqtt.*;
 
@@ -100,7 +103,8 @@ public class Service extends android.app.Service {
     private MqttAsyncClient client;
     private boolean connected;
     private long mStartTime;
-
+    private Timer timer;
+    private WakeLock wakeLock = null;
 
     // Static method to start the service
     public static void actionStart(Context ctx, String url, String topic, String username, String password) {
@@ -133,37 +137,62 @@ public class Service extends android.app.Service {
 
         log("Creating service");
         mStartTime = System.currentTimeMillis();
-
-        try {
-            mLog = new ConnectionLog();
-            Log.i(TAG, "Opened log at " + mLog.getPath());
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to open log", e);
-        }
-
-        // Get instances of preferences, connectivity manager and notification manager
         mPrefs = getSharedPreferences(TAG, MODE_PRIVATE);
         mConnMan = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         mNotifMan = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        registerReceiver(mConnectivityChanged, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 
 		/* If our process was reaped by the system for any reason we need
          * to restore our state with merely a call to onCreate.  We record
 		 * the last "started" value and restore it here if necessary. */
-        handleCrashedService();
+//        handleCrashedService();
+    }
+
+    private void acquireWakeLock() {
+        if (null == wakeLock) {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK
+                    | PowerManager.ON_AFTER_RELEASE, getClass()
+                    .getCanonicalName());
+            if (null != wakeLock) {
+                Log.i(TAG, "call acquireWakeLock");
+                wakeLock.acquire();
+            }
+        }
+    }
+
+    private void releaseWakeLock() {
+        if (null != wakeLock && wakeLock.isHeld()) {
+            Log.i(TAG, "call releaseWakeLock");
+            wakeLock.release();
+            wakeLock = null;
+        }
+    }
+
+    class RemindTask extends TimerTask {
+        public void run() {
+            System.out.println("timer task running");
+            reconnectIfNecessary();
+            timer.schedule(new RemindTask(),  1000 * 5);
+        }
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        if (intent.getAction().equals(ACTION_STOP) == true) {
+            stop();
+            stopSelf();
+            releaseWakeLock();
+        } else if (intent.getAction().equals(ACTION_START) == true) {
+            start();
+            acquireWakeLock();
+        }
+        flags = START_STICKY;
+        return super.onStartCommand(intent, flags, startId);
     }
 
     // This method does any necessary clean-up need in case the server has been destroyed by the system
     // and then restarted
-    private void handleCrashedService() {
-        if (wasStarted() == true) {
-            log("Handling crashed service...");
-            // stop the keep alives
-            stopKeepAlives();
-
-            // Do a clean start
-            start();
-        }
-    }
 
     @Override
     public void onDestroy() {
@@ -171,7 +200,7 @@ public class Service extends android.app.Service {
 
         // Stop the services, if it has been started
         if (mStarted == true) {
-            stop();
+//            stop();
         }
 
         try {
@@ -181,25 +210,6 @@ public class Service extends android.app.Service {
         }
     }
 
-    @Override
-    public void onStart(Intent intent, int startId) {
-        super.onStart(intent, startId);
-        log("Service started with intent=" + intent);
-
-        // Do an appropriate action based on the intent.
-        if (intent.getAction().equals(ACTION_STOP) == true) {
-            stop();
-            stopSelf();
-        } else if (intent.getAction().equals(ACTION_START) == true) {
-            start();
-        } else if (intent.getAction().equals(ACTION_KEEPALIVE) == true) {
-            //keepAlive();
-        } else if (intent.getAction().equals(ACTION_RECONNECT) == true) {
-            if (isNetworkAvailable()) {
-                reconnectIfNecessary();
-            }
-        }
-    }
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -249,9 +259,8 @@ public class Service extends android.app.Service {
 
         // Establish an MQTT connection
         connect();
-
-        // Register a connectivity listener
-        registerReceiver(mConnectivityChanged, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        timer = new Timer();
+        timer.schedule(new RemindTask(), KEEP_ALIVE_INTERVAL);
     }
 
     private synchronized void stop() {
@@ -266,10 +275,7 @@ public class Service extends android.app.Service {
 
         // Remove the connectivity receiver
         unregisterReceiver(mConnectivityChanged);
-        // Any existing reconnect timers should be removed, since we explicitly stopping the service.
-        cancelReconnect();
 
-        // Destroy the MQTT connection if there is one
         if (client != null) {
             try {
                 client.disconnect();
@@ -283,33 +289,17 @@ public class Service extends android.app.Service {
     //
     private synchronized void connect() {
         log("Connecting...");
-        // fetch the device ID from the preferences.
-//        String deviceID = mPrefs.getString(PREF_DEVICE_ID, null);
-        // Create a new connection only if the device id is not NULL
-//        if (deviceID == null) {
-//            log("Device ID not found.");
-//        } else {
-//        try {
-        new Thread() {
-            @Override
-            public void run() {
-                try {
-//                    mConnection = new MQTTConnection(MQTT_HOST, MQTT_TOPIC);
-                    connect(MQTT_URL, USERNAME, PASSWORD);
-                } catch (Exception e) {
-                    log("MqttException: " + (e.getMessage() != null ? e.getMessage() : "NULL"), e);
-                }
-            }
-        }.start();
-//        } catch (MqttException e) {
-//            // Schedule a reconnect, if we failed to connect
-//            log("MqttException: " + (e.getMessage() != null ? e.getMessage() : "NULL"));
-//            if (isNetworkAvailable()) {
-//                scheduleReconnect(mStartTime);
+//        new Thread() {
+//            @Override
+//            public void run() {
+//                try {
+        connect(MQTT_URL, USERNAME, PASSWORD);
+//                } catch (Exception e) {
+//                    log("MqttException: " + (e.getMessage() != null ? e.getMessage() : "NULL"), e);
+//                }
 //            }
-//        }
+//        }.start();
         setStarted(true);
-//        }
     }
 
 
@@ -331,56 +321,6 @@ public class Service extends android.app.Service {
         }.start();
     }
 
-    // Remove all scheduled keep alives
-    private void stopKeepAlives() {
-        Intent i = new Intent();
-        i.setClass(this, Service.class);
-        i.setAction(ACTION_KEEPALIVE);
-        PendingIntent pi = PendingIntent.getService(this, 0, i, 0);
-        AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);
-        alarmMgr.cancel(pi);
-    }
-
-    // We schedule a reconnect based on the starttime of the service
-    public void scheduleReconnect(long startTime) {
-        // the last keep-alive interval
-        long interval = mPrefs.getLong(PREF_RETRY, INITIAL_RETRY_INTERVAL);
-
-        // Calculate the elapsed time since the start
-        long now = System.currentTimeMillis();
-        long elapsed = now - startTime;
-
-
-        // Set an appropriate interval based on the elapsed time since start
-        if (elapsed < interval) {
-            interval = Math.min(interval * 4, MAXIMUM_RETRY_INTERVAL);
-        } else {
-            interval = INITIAL_RETRY_INTERVAL;
-        }
-
-        log("Rescheduling connection in " + interval + "ms.");
-
-        // Save the new internval
-        mPrefs.edit().putLong(PREF_RETRY, interval).commit();
-
-        // Schedule a reconnect using the alarm manager.
-        Intent i = new Intent();
-        i.setClass(this, Service.class);
-        i.setAction(ACTION_RECONNECT);
-        PendingIntent pi = PendingIntent.getService(this, 0, i, 0);
-        AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);
-        alarmMgr.set(AlarmManager.RTC_WAKEUP, now + interval, pi);
-    }
-
-    // Remove the scheduled reconnect
-    public void cancelReconnect() {
-        Intent i = new Intent();
-        i.setClass(this, Service.class);
-        i.setAction(ACTION_RECONNECT);
-        PendingIntent pi = PendingIntent.getService(this, 0, i, 0);
-        AlarmManager alarmMgr = (AlarmManager) getSystemService(ALARM_SERVICE);
-        alarmMgr.cancel(pi);
-    }
 
     private synchronized void reconnectIfNecessary() {
 //        if (mStarted == true && mConnection == null) {
@@ -394,38 +334,13 @@ public class Service extends android.app.Service {
     private BroadcastReceiver mConnectivityChanged = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            // Get network info
-            NetworkInfo info = (NetworkInfo) intent.getParcelableExtra(ConnectivityManager.EXTRA_NETWORK_INFO);
-
-            // Is there connectivity?
-            boolean hasConnectivity = (info != null && info.isConnected()) ? true : false;
-
-            log("Connectivity changed: connected=" + hasConnectivity);
-
-//            if (hasConnectivity) {
+            log("Connectivity changed: connected=");
             reconnectIfNecessary();
-//            } else if (mConnection != null) {
-            // if there no connectivity, make sure MQTT connection is destroyed
-//                mConnection.disconnect();
-            cancelReconnect();
-//                mConnection = null;
-//            }
         }
     };
 
     // Display the topbar notification
     private void showNotification(String text) {
-//        Notification n = new Notification();
-
-//        n.flags |= Notification.FLAG_SHOW_LIGHTS;
-//        n.flags |= Notification.FLAG_AUTO_CANCEL;
-
-//        n.defaults = Notification.DEFAULT_ALL;
-
-//        n.when = System.currentTimeMillis();
-
-        // Simply open the parent activity
-
         String title = text;
         String content = text;
         String ticker = text;
@@ -445,13 +360,9 @@ public class Service extends android.app.Service {
         }
         PendingIntent pi = PendingIntent.getActivities(this, notifyId, new Intent[]{intent}, PendingIntent.FLAG_UPDATE_CURRENT);
 
-//        PendingIntent pi = PendingIntent.getActivity(this, 0,
-//                new Intent(this, Service.class), 0);
-
-        // Change the name of the notification here
         Notification n = new Notification.Builder(this)
                 .setDefaults(Notification.DEFAULT_ALL)
-                .setSmallIcon(R.drawable.launcher_icon)
+                .setSmallIcon(R.mipmap.icon)
                 .setTicker(ticker)
                 .setContentTitle(title)
                 .setContentText(content)
@@ -476,6 +387,8 @@ public class Service extends android.app.Service {
         final MqttConnectOptions connOpts = new MqttConnectOptions();
         connected = false;
         try {
+            Log.i("mqttalabs", "========connecting");
+
             final String clientId = client.generateClientId();
             String willTopic = MQTT_WILL_TOPIC;
             String willPayload = "TEST";
@@ -483,6 +396,9 @@ public class Service extends android.app.Service {
             int willQos = 0;
             connOpts.setCleanSession(MQTT_CLEAN_START);
             connOpts.setKeepAliveInterval(MQTT_KEEP_ALIVE);
+            if (client != null && client.isConnected()) {
+                return;
+            }
             client = new MqttAsyncClient(url, clientId, persistence);
             client.setCallback(new MqttCallback() {
                 @Override
@@ -512,7 +428,6 @@ public class Service extends android.app.Service {
             });
             if (willTopic != null && willPayload != null && willQos > -1) {
 
-//                connOpts.setWill(willTopic, willPayload.getBytes(), willQos, willRetain);
             }
 
             if (username.toString() == "null" && password.toString() == "null") {
@@ -523,7 +438,6 @@ public class Service extends android.app.Service {
                 connOpts.setUserName(username);
                 connOpts.setPassword(password.toCharArray());
             }
-            //connOpts.setMqttVersion(MqttConnectOptions.MQTT_VERSION_3_1);
             connOpts.setConnectionTimeout(MQTT_TIME_OUT);
             client.connect(connOpts, null, new IMqttActionListener() {
                 @Override
@@ -536,7 +450,6 @@ public class Service extends android.app.Service {
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                     connected = false;
-
 
                 }
             });
@@ -563,106 +476,4 @@ public class Service extends android.app.Service {
             e.printStackTrace();
         }
     }
-//    private class MQTTConnection implements MqttSimpleCallback {
-//        IMqttClient mqttClient = null;
-//
-//        // Creates a new connection given the broker address and initial topic
-//        public MQTTConnection(String brokerHostName, String initTopic) throws MqttException {
-//            // Create connection spec
-//            String mqttConnSpec = "tcp://" + brokerHostName + "@" + MQTT_BROKER_PORT_NUM;
-//            // Create the client and connect
-//            mqttClient = MqttClient.createMqttClient(mqttConnSpec, MQTT_PERSISTENCE);
-//            String clientID = UUID.randomUUID().toString().substring(0,7);
-//
-//            mqttClient.connect(clientID, MQTT_CLEAN_START, MQTT_KEEP_ALIVE);
-//
-//            // register this client app has being able to receive messages
-//            mqttClient.registerSimpleHandler(this);
-//
-//            // Subscribe to an initial topic, which is combination of client ID and device ID.
-//            initTopic = initTopic + "/#";
-//            subscribeToTopic(initTopic);
-//
-//            log("Connection established to " + brokerHostName + " on topic " + initTopic);
-//
-//            // Save start time
-//            mStartTime = System.currentTimeMillis();
-//            // Star the keep-alives
-//            startKeepAlives();
-//        }
-//
-//        // Disconnect
-//        public void disconnect() {
-//            try {
-//                stopKeepAlives();
-//                mqttClient.disconnect();
-//            } catch (MqttPersistenceException e) {
-//                log("MqttException" + (e.getMessage() != null ? e.getMessage() : " NULL"), e);
-//            }
-//        }
-//
-//        /*
-//         * Send a request to the message broker to be sent messages published with
-//         *  the specified topic name. Wildcards are allowed.
-//         */
-//        private void subscribeToTopic(String topicName) throws MqttException {
-//
-//            if ((mqttClient == null) || (mqttClient.isConnected() == false)) {
-//                // quick sanity check - don't try and subscribe if we don't have
-//                //  a connection
-//                log("Connection error" + "No connection");
-//            } else {
-//                String[] topics = {topicName};
-//                mqttClient.subscribe(topics, MQTT_QUALITIES_OF_SERVICE);
-//            }
-//        }
-//
-//        /*
-//         * Sends a message to the message broker, requesting that it be published
-//         *  to the specified topic.
-//         */
-//        private void publishToTopic(String topicName, String message) throws MqttException {
-//            if ((mqttClient == null) || (mqttClient.isConnected() == false)) {
-//                // quick sanity check - don't try and publish if we don't have
-//                //  a connection
-//                log("No connection to public to");
-//            } else {
-//                mqttClient.publish(topicName,
-//                        message.getBytes(),
-//                        MQTT_QUALITY_OF_SERVICE,
-//                        MQTT_RETAINED_PUBLISH);
-//            }
-//        }
-//
-//        /*
-//         * Called if the application loses it's connection to the message broker.
-//         */
-//        public void connectionLost() throws Exception {
-//            log("Loss of connection" + "connection downed");
-//            if (!mConnection.mqttClient.isConnected()) {
-//                stopKeepAlives();
-//                // null itself
-//                mConnection = null;
-//                if (isNetworkAvailable() == true) {
-//                    reconnectIfNecessary();
-//                }
-//            }
-//        }
-//
-//        /*
-//         * Called when we receive a message from the message broker.
-//         */
-//        public void publishArrived(String topicName, byte[] payload, int qos, boolean retained) {
-//            // Show a notification
-//            String s = new String(payload);
-//            showNotification(s);
-//            log("Got message: " + s);
-//        }
-//
-//        public void sendKeepAlive() throws MqttException {
-//            log("Sending keep alive");
-//            // publish to a keep-alive topic
-//            publishToTopic(MQTT_CLIENT_ID + "/keepalive", mPrefs.getString(PREF_DEVICE_ID, ""));
-//        }
-//    }
 }

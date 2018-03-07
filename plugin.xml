@@ -13,8 +13,14 @@
             </feature>
         </config-file>
         <config-file parent="/manifest/application" target="AndroidManifest.xml">
-            <service android:name="com.heytz.pushService.Service"
-                     android:label="Heytz Push Notifications Service"></service>
+            <service android:enabled="true" android:label="Heytz Push Notifications Service" android:name="com.heytz.pushService.Service" >
+                <intent-filter android:priority="1000">
+                    <action android:name="com.heytz.pushService.ACTION_START" />
+                </intent-filter>
+            </service>
+        </config-file>
+        <config-file parent="/manifest" target="AndroidManifest.xml">
+            <uses-permission android:name="android.permission.WAKE_LOCK"/>
         </config-file>
         <source-file src="src/android/ServiceWrapper.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="src/android/ConnectionLog.java" target-dir="src/com/heytz/pushService"/>
