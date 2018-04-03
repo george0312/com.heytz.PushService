@@ -33,6 +33,7 @@
         <source-file src="src/android/ServiceWrapper.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="src/android/ConnectionLog.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="src/android/Service.java" target-dir="src/com/heytz/pushService"/>
+        <source-file src="src/android/KeepAlive_Activity.java" target-dir="src/com/heytz/KeepAlive_Activity"/>
         <source-file src="libs/org.eclipse.paho.client.mqttv3.jar" target-dir="libs"/>
         <source-file src="libs/eventbus-3.1.1.jar" target-dir="libs"/>
     </platform>
