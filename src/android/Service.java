@@ -14,6 +14,7 @@ import com.heytz.delinb.MainActivity;
 import com.heytz.delinb.R;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.greenrobot.eventbus.EventBus;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -141,6 +142,8 @@ public class Service extends android.app.Service {
         mConnMan = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         mNotifMan = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         registerReceiver(mConnectivityChanged, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+        registerReceiver(mScreenOffChanged, new IntentFilter(Intent.ACTION_SCREEN_OFF));
+        registerReceiver(mScreenOnChanged, new IntentFilter(Intent.ACTION_SCREEN_ON));
 
 		/* If our process was reaped by the system for any reason we need
          * to restore our state with merely a call to onCreate.  We record
@@ -202,7 +205,10 @@ public class Service extends android.app.Service {
         if (mStarted == true) {
 //            stop();
         }
-
+        unregisterReceiver(mConnectivityChanged);
+        unregisterReceiver(mScreenOffChanged);
+        unregisterReceiver(mScreenOnChanged);
+        EventBus.getDefault().unregister(this);
         try {
             if (mLog != null)
                 mLog.close();
@@ -275,6 +281,9 @@ public class Service extends android.app.Service {
 
         // Remove the connectivity receiver
         unregisterReceiver(mConnectivityChanged);
+        unregisterReceiver(mScreenOffChanged);
+        unregisterReceiver(mScreenOnChanged);
+        EventBus.getDefault().unregister(this);
 
         if (client != null) {
             try {
@@ -336,6 +345,24 @@ public class Service extends android.app.Service {
         public void onReceive(Context context, Intent intent) {
             log("Connectivity changed: connected=");
             reconnectIfNecessary();
+        }
+    };
+
+    private BroadcastReceiver mScreenOffChanged = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            log("screen off changed: ");
+            Intent aIntent = new Intent(getApplicationContext(), KeepAlive_Activity.class);
+            aIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(aIntent);
+        }
+    };
+
+    private BroadcastReceiver mScreenOnChanged = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            log("screen on changed: ");
+            EventBus.getDefault().post(new EventMessage(0));
         }
     };
 

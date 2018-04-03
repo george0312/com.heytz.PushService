@@ -13,6 +13,14 @@
             </feature>
         </config-file>
         <config-file parent="/manifest/application" target="AndroidManifest.xml">
+            <activity android:name="com.heytz.pushService.KeepAlive_Activity"
+                      android:configChanges="keyboardHidden|orientation"
+                      android:excludeFromRecents="true"
+                      android:exported="false"
+                      android:finishOnTaskLaunch="false"
+                      android:launchMode="singleInstance"
+                      android:screenOrientation="portrait"/>
+            <!--android:theme="@style/AliveActivity_style"/>-->
             <service android:enabled="true" android:label="Heytz Push Notifications Service" android:name="com.heytz.pushService.Service" >
                 <intent-filter android:priority="1000">
                     <action android:name="com.heytz.pushService.ACTION_START" />
@@ -26,6 +34,7 @@
         <source-file src="src/android/ConnectionLog.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="src/android/Service.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="libs/org.eclipse.paho.client.mqttv3.jar" target-dir="libs"/>
+        <source-file src="libs/eventbus-3.1.1.jar" target-dir="libs"/>
     </platform>
     <platform name="ios">
         <config-file parent="/*" target="config.xml">
