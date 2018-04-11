@@ -7,6 +7,7 @@ import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaWebView;
 import org.json.JSONArray;
 import org.json.JSONException;
+import cn.jpush.android.api.JPushInterface;
 
 /**
  * This class starts transmit to activation
@@ -22,6 +23,7 @@ public class ServiceWrapper extends CordovaPlugin {
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
         context = cordova.getActivity().getApplicationContext();
+        JPushInterface.init(context);
     }
 
     @Override
