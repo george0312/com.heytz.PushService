@@ -280,10 +280,10 @@ public class Service extends android.app.Service {
         setStarted(false);
 
         // Remove the connectivity receiver
-        unregisterReceiver(mConnectivityChanged);
-        unregisterReceiver(mScreenOffChanged);
-        unregisterReceiver(mScreenOnChanged);
-        EventBus.getDefault().unregister(this);
+//         unregisterReceiver(mConnectivityChanged);
+//         unregisterReceiver(mScreenOffChanged);
+//         unregisterReceiver(mScreenOnChanged);
+//         EventBus.getDefault().unregister(this);
 
         if (client != null) {
             try {
