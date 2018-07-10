@@ -23,21 +23,25 @@ module.exports = function (context) {
     return;
   }
 
-  var targetDir = path.join(projectRoot, "platforms", "android", "src", "com", "heytz", "pushService");
-  var targetFiles = ["Service.java"];
+  var targetDir = path.join(projectRoot, "platforms", "android", "src", "com", "heytz", "pushService"),
+  targetFile = path.join(targetDir, "JPushPlugin.java");
+
+  // var targetFiles = ["Service.java"];
 
   console.log(targetDir);
 
   if (['after_plugin_add', 'after_plugin_install', 'after_platform_add'].indexOf(context.hook) === -1) {
+    // try {
+    //   if(context.opts.plugins && context.opts.plugins.indexOf(context.opts.plugin.id) !== -1){
+    //     targetFiles.forEach(function(file){
+    //       var targetFile = path.join(targetDir, file);
+    //       fs.unlinkSync(targetFile);
+    //     });
+    //   }
+    // } catch (err) {}
     try {
-      if(context.opts.plugins && context.opts.plugins.indexOf(context.opts.plugin.id) !== -1){
-        targetFiles.forEach(function(file){
-          var targetFile = path.join(targetDir, file);
-          fs.unlinkSync(targetFile);
-        });
-      }
+      fs.unlinkSync(targetFile);
     } catch (err) {}
-
   } else {
     // create directory
     shell.mkdir('-p', targetDir);
