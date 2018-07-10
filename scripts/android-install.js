@@ -24,7 +24,7 @@ module.exports = function (context) {
   }
 
   var targetDir = path.join(projectRoot, "platforms", "android", "src", "com", "heytz", "pushService"),
-  targetFile = path.join(targetDir, "JPushPlugin.java");
+  targetFile = path.join(targetDir, "Service.java");
 
   // var targetFiles = ["Service.java"];
 
@@ -51,8 +51,8 @@ module.exports = function (context) {
       if (err) {
         throw err;
       }
+      data = data.replace(/_____PACKAGE_NAME_____/ig, packageName);
       // data = data.replace(/^import __ANDROID_PACKAGE__.R;/m, 'import ' + packageName + '.R;');
-      data = data.replace(/^_____PACKAGE_NAME_____/ig, packageName);
       // data = data.replace(/^import _____PACKAGE_NAME_____.MainActivity;/m, 'import ' + packageName + '.MainActivity;');
       // data = data.replace(/^import _____PACKAGE_NAME_____.R;/m, 'import ' + packageName + '.R;');
       fs.writeFileSync(targetFile, data);
