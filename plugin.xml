@@ -7,6 +7,12 @@
         <clobbers target="cordova.plugins.ServiceWrapper"/>
     </js-module>
     <platform name="android">
+        <hook type="after_plugin_add" src="scripts/android-install.js" />
+        <hook type="after_plugin_install" src="scripts/android-install.js" />
+        <hook type="before_plugin_rm" src="scripts/android-install.js" />
+        <hook type="before_plugin_uninstall" src="scripts/android-install.js" />
+
+
         <config-file parent="/*" target="res/xml/config.xml">
             <feature name="ServiceWrapper">
                 <param name="android-package" value="com.heytz.pushService.ServiceWrapper"/>
@@ -30,7 +36,7 @@
                 <intent-filter>
                     <action android:name="cn.jpush.android.ui.PushActivity" />
                     <category android:name="android.intent.category.DEFAULT" />
-                    <category android:name="com.heytz.thundertwo" />
+                    <category android:name="$PACKAGE_NAME" />
                 </intent-filter>
             </activity>
             <service android:exported="false" android:name="cn.jpush.android.service.PushService" android:process=":mult">
@@ -44,7 +50,7 @@
             <receiver android:enabled="true" android:exported="false" android:name="cn.jpush.android.service.PushReceiver">
                 <intent-filter android:priority="1000">
                     <action android:name="cn.jpush.android.intent.NOTIFICATION_RECEIVED_PROXY" />
-                    <category android:name="com.heytz.thundertwo" />
+                    <category android:name="$PACKAGE_NAME" />
                 </intent-filter>
                 <intent-filter>
                     <action android:name="android.intent.action.USER_PRESENT" />
@@ -62,7 +68,7 @@
         </config-file>
         <config-file parent="/manifest" target="AndroidManifest.xml">
             <uses-permission android:name="android.permission.WAKE_LOCK"/>
-            <uses-permission android:name="com.heytz.thundertwo.permission.JPUSH_MESSAGE" />
+            <uses-permission android:name="$PACKAGE_NAME.permission.JPUSH_MESSAGE" />
             <uses-permission android:name="android.permission.RECEIVE_USER_PRESENT" />
             <uses-permission android:name="android.permission.INTERNET" />
             <uses-permission android:name="android.permission.READ_PHONE_STATE" />
@@ -83,12 +89,12 @@
             <uses-permission android:name="android.permission.CAMERA" />
             <uses-permission android:name="android.permission.FLASHLIGHT" />
             <uses-feature android:name="android.hardware.camera" android:required="true" />
-            <permission android:name="com.heytz.thundertwo.permission.JPUSH_MESSAGE" android:protectionLevel="signature" />
+            <permission android:name="$PACKAGE_NAME.permission.JPUSH_MESSAGE" android:protectionLevel="signature" />
         </config-file>
         <source-file src="src/android/ServiceWrapper.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="src/android/ConnectionLog.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="src/android/Service.java" target-dir="src/com/heytz/pushService"/>
-        <source-file src="src/android/KeepAlive_Activity.java" target-dir="src/com/heytz/KeepAlive_Activity"/>
+        <source-file src="src/android/KeepAlive_Activity.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="libs/org.eclipse.paho.client.mqttv3.jar" target-dir="libs"/>
         <source-file src="libs/eventbus-3.1.1.jar" target-dir="libs"/>
         <source-file src="libs/jpush-android-3.1.1.jar" target-dir="libs"/>
