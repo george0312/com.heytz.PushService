@@ -95,10 +95,13 @@
         <source-file src="src/android/ConnectionLog.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="src/android/Service.java" target-dir="src/com/heytz/pushService"/>
         <source-file src="src/android/KeepAlive_Activity.java" target-dir="src/com/heytz/pushService"/>
-        <source-file src="libs/org.eclipse.paho.client.mqttv3.jar" target-dir="libs"/>
+        <!--<source-file src="libs/org.eclipse.paho.client.mqttv3.jar" target-dir="libs"/>-->
         <source-file src="libs/eventbus-3.1.1.jar" target-dir="libs"/>
         <source-file src="libs/jpush-android-3.1.1.jar" target-dir="libs"/>
         <source-file src="libs/jcore-android-1.1.9.jar" target-dir="libs"/>
+
+        <!--mqtt3-->
+        <framework src="src/android/pushservice.gradle" custom="true" type="gradleReference"/>
     </platform>
     <platform name="ios">
         <config-file parent="/*" target="config.xml">
