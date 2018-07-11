@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
-//import com.ibm.mqtt.*;
 
 /*
  * PushService that does all of the work.
@@ -141,13 +140,23 @@ public class Service extends android.app.Service {
         mPrefs = getSharedPreferences(TAG, MODE_PRIVATE);
         mConnMan = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         mNotifMan = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
+        // 兼容 Android 6.0 系统以上
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // https://developer.android.google.cn/training/notify-user/build-notification
+            mNotifMan = getSystemService(NotificationManager.class);
+            // 兼容 8.0 系统
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                createNotificationChannel(mNotifMan);
+            }
+        }
         registerReceiver(mConnectivityChanged, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         registerReceiver(mScreenOffChanged, new IntentFilter(Intent.ACTION_SCREEN_OFF));
         registerReceiver(mScreenOnChanged, new IntentFilter(Intent.ACTION_SCREEN_ON));
 
-		/* If our process was reaped by the system for any reason we need
+        /* If our process was reaped by the system for any reason we need
          * to restore our state with merely a call to onCreate.  We record
-		 * the last "started" value and restore it here if necessary. */
+         * the last "started" value and restore it here if necessary. */
 //        handleCrashedService();
     }
 
@@ -176,7 +185,7 @@ public class Service extends android.app.Service {
         public void run() {
             System.out.println("timer task running");
             reconnectIfNecessary();
-            timer.schedule(new RemindTask(),  1000 * 5);
+            timer.schedule(new RemindTask(), 1000 * 5);
         }
     }
 
@@ -368,36 +377,79 @@ public class Service extends android.app.Service {
 
     // Display the topbar notification
     private void showNotification(String text) {
-        String title = text;
-        String content = text;
-        String ticker = text;
-        String page = "";
+        PushMsgInfo pushMsgInfo = new PushMsgInfo();
         try {
             JSONObject notifyObj = new JSONObject(text);
-            title = notifyObj.getString("title");
-            content = notifyObj.getString("content");
-            ticker = notifyObj.getString("ticker");
-            page = notifyObj.getString("page");
+            pushMsgInfo.setTitle(notifyObj.getString("title"));
+            pushMsgInfo.setContent(notifyObj.getString("content"));
+            pushMsgInfo.setTicker(notifyObj.getString("ticker"));
+            pushMsgInfo.setPage(notifyObj.getString("page"));
         } catch (Exception e) {
-
         }
-        Intent intent = new Intent(this, MainActivity.class);
-        if (page != "") {
-            intent.setAction("NOTI#" + page + "#" + notifyId);
-        }
-        PendingIntent pi = PendingIntent.getActivities(this, notifyId, new Intent[]{intent}, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        Notification n = new Notification.Builder(this)
-                .setDefaults(Notification.DEFAULT_ALL)
-                .setSmallIcon(R.mipmap.icon)
-                .setTicker(ticker)
-                .setContentTitle(title)
-                .setContentText(content)
-                .setContentIntent(pi).build();
-        mNotifMan.notify(notifyId, n);
+        NotificationCompat.Builder builder = createNotificationCompatBuilder(this, pushMsgInfo);
+        mNotifMan.notify(notifyId, builder.build());
         notifyId++;
-
     }
+
+    /**
+     * 组装推送
+     *
+     * @param {Context}context
+     * @param {PushMsgInfo}pushMsg
+     * @return
+     */
+    @NonNull
+    private NotificationCompat.Builder createNotificationCompatBuilder(Context context, PushMsgInfo pushMsg) {
+        // 通知栏点击接收者
+        Intent i = new Intent(context, MainActivity.class);
+        String page = pushMsg.getPage();
+        if (!"".equals(page) && page != null) {
+            i.setAction("NOTI#" + page + "#" + notifyId);
+        }
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, notifyId, i, PendingIntent.FLAG_UPDATE_CURRENT);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "heytz");
+        builder.setDefaults(Notification.DEFAULT_ALL);
+        builder.setSmallIcon(R.mipmap.icon);
+        builder.setTicker(pushMsg.getTicker());
+        builder.setContentTitle(pushMsg.getTitle());
+        builder.setContentText(pushMsg.getContent());
+        builder.setContentIntent(pendingIntent);
+        builder.setAutoCancel(true);
+        return builder;
+    }
+
+    /**
+     * Android  8.0 系统，Google引入通知渠道，提高用户体验，方便用户管理通知信息，同时也提高了通知到达率。
+     * https://developer.android.google.cn/about/versions/oreo/android-8.0#notifications
+     * https://developer.android.google.cn/training/notify-user/build-notification
+     * 注意：
+     * 1.创建通知渠道 createNotificationChannel() 一定要写在创建显示通知之前。
+     * 2.创建通知渠道的代码只在第一次执行的时候才会创建，以后每次执行创建代码系统会检测到该通知渠道已经存在了，因此不会重复创建，也并不会影响任何效率。
+     *
+     * @param notificationManager
+     */
+    @TargetApi(Build.VERSION_CODES.O)
+    private void createNotificationChannel(NotificationManager notificationManager) {
+        // 通知渠道
+        NotificationChannel mChannel = new NotificationChannel("heytz", "黑子", NotificationManager.IMPORTANCE_HIGH);
+        // 开启指示灯，如果设备有的话。
+        mChannel.enableLights(true);
+        // 开启震动
+        mChannel.enableVibration(true);
+        //  设置指示灯颜色
+        mChannel.setLightColor(Color.RED);
+        // 设置是否应在锁定屏幕上显示此频道的通知
+        mChannel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+        // 设置是否显示角标
+        mChannel.setShowBadge(true);
+        //  设置绕过免打扰模式
+        mChannel.setBypassDnd(true);
+        // 设置震动频率
+        mChannel.setVibrationPattern(new long[]{100, 200, 300, 400});
+        //最后在notificationmanager中创建该通知渠道
+        notificationManager.createNotificationChannel(mChannel);
+    }
+
 
     // Check if we are online
     private boolean isNetworkAvailable() {
@@ -504,3 +556,4 @@ public class Service extends android.app.Service {
         }
     }
 }
+
