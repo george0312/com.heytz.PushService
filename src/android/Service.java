@@ -1,17 +1,25 @@
 package com.heytz.pushService;
 
+import android.annotation.TargetApi;
 import android.app.Notification;
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.*;
+import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.os.PowerManager.WakeLock;
+import android.support.annotation.NonNull;
+import android.support.v4.app.NotificationCompat;
 import android.util.Log;
+
 import _____PACKAGE_NAME_____.MainActivity;
 import _____PACKAGE_NAME_____.R;
+
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.greenrobot.eventbus.EventBus;
