@@ -350,7 +350,7 @@ public class Service extends android.app.Service {
 
     private synchronized void reconnectIfNecessary() {
 //        if (mStarted == true && mConnection == null) {
-        log("Reconnecting...");
+        log("check mqtt connecting status ...");
         connect();
 //        }
     }
@@ -414,7 +414,7 @@ public class Service extends android.app.Service {
         if (!"".equals(page) && page != null) {
             i.setAction("NOTI#" + page + "#" + notifyId);
         }
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(context, notifyId, i, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntent =PendingIntent.getActivities(context, notifyId, new Intent[]{i}, PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "heytz");
         builder.setDefaults(Notification.DEFAULT_ALL);
         builder.setSmallIcon(R.mipmap.icon);
@@ -474,7 +474,7 @@ public class Service extends android.app.Service {
         final MqttConnectOptions connOpts = new MqttConnectOptions();
         connected = false;
         try {
-            Log.i("mqttalabs", "========connecting");
+            //Log.i("mqttalabs", "========connecting");
 
             final String clientId = client.generateClientId();
             String willTopic = MQTT_WILL_TOPIC;
@@ -484,8 +484,10 @@ public class Service extends android.app.Service {
             connOpts.setCleanSession(MQTT_CLEAN_START);
             connOpts.setKeepAliveInterval(MQTT_KEEP_ALIVE);
             if (client != null && client.isConnected()) {
+                Log.i("push mqtt","isConnected");
                 return;
             }
+            Log.e("push mqtt","not connected");
             client = new MqttAsyncClient(url, clientId, persistence);
             client.setCallback(new MqttCallback() {
                 @Override
