@@ -84,12 +84,12 @@ didReceiveRemoteNotification:(NSDictionary *)userInfo
 fetchCompletionHandler:
 (void (^)(UIBackgroundFetchResult))completionHandler {
     
-    NSLog(@"userInfo == %@",userInfo);
-    NSString *message = [[userInfo objectForKey:@"aps"]objectForKey:@"alert"];
-    page = [userInfo objectForKey:@"page"];
-    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"提示" message:message delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"查看", nil];
-    NSLog(@"buttonTitleAtIndex1:%@",[alert buttonTitleAtIndex:1]);
-    [alert show];
+//    NSLog(@"userInfo == %@",userInfo);
+//    NSString *message = [[userInfo objectForKey:@"aps"]objectForKey:@"alert"];
+//    page = [userInfo objectForKey:@"page"];
+//    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"提示" message:message delegate:self cancelButtonTitle:@"取消" otherButtonTitles:@"查看", nil];
+//    NSLog(@"buttonTitleAtIndex1:%@",[alert buttonTitleAtIndex:1]);
+//    [alert show];
    
   
 }
