@@ -91,8 +91,8 @@
         <source-file src="src/android/KeepAlive_Activity.java" target-dir="src/com/heytz/KeepAlive_Activity"/>
         <source-file src="libs/org.eclipse.paho.client.mqttv3.jar" target-dir="libs"/>
         <source-file src="libs/eventbus-3.1.1.jar" target-dir="libs"/>
-        <source-file src="libs/jpush-android-3.1.1.jar" target-dir="libs"/>
-        <source-file src="libs/jcore-android-1.1.9.jar" target-dir="libs"/>
+        <source-file src="libs/jpush-android-3.1.8.jar" target-dir="libs"/>
+        <source-file src="libs/jcore-android-1.2.6.jar" target-dir="libs"/>
     </platform>
     <platform name="ios">
         <config-file parent="/*" target="config.xml">
