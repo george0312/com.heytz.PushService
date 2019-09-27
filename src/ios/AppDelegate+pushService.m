@@ -45,11 +45,13 @@ NSString *page;
 - (void)application:(UIApplication *)application
 didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
     if ([[UIDevice currentDevice].systemVersion floatValue] >= 13.0) {
+        NSMutableString *deviceTokenString = [NSMutableString string];
         const char *bytes = deviceToken.bytes;
         NSInteger count = deviceToken.length;
         for (int i = 0; i < count; i++) {
-            [token appendFormat:@"%02x", bytes[i]&0x000000FF];
+            [deviceTokenString appendFormat:@"%02x", bytes[i]&0x000000FF];
         }
+        token=deviceTokenString;
     }else {
         token=[NSString stringWithFormat:@"%@", deviceToken];
     }
