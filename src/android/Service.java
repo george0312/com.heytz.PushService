@@ -318,7 +318,13 @@ public class Service extends android.app.Service {
                 Log.e(TAG, "disconnect error+" + e.getMessage());
             }
             client = null;
-            initiativeClose=false;
+            Timer initiativeCloseTimer = new Timer();
+            initiativeCloseTimer.schedule(new TimerTask() {
+                public void run() {
+                    System.out.println("set initiativeClose: false");
+                    initiativeClose=false;
+                }
+            }, 1000 * 5);
         }
     }
 
@@ -482,7 +488,7 @@ public class Service extends android.app.Service {
     private void connect(String url, String username, String password) {
         MemoryPersistence persistence = new MemoryPersistence();
         final MqttConnectOptions connOpts = new MqttConnectOptions();
-        connected = false;
+
         try {
             //Log.i("mqttalabs", "========connecting");
 
@@ -493,11 +499,12 @@ public class Service extends android.app.Service {
             int willQos = 0;
             connOpts.setCleanSession(MQTT_CLEAN_START);
             connOpts.setKeepAliveInterval(MQTT_KEEP_ALIVE);
-            if (client != null && client.isConnected()) {
-                Log.i("push mqtt", "isConnected");
-                connected = true;
+            if(client != null){
+                Log.i(TAG,"client already exists");
+                connected = client.isConnected();
                 return;
             }
+            connected = false;
             Log.e("push mqtt", "not connected");
             client = new MqttAsyncClient(url, clientId, persistence);
             client.setCallback(new MqttCallback() {
