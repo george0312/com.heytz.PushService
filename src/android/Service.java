@@ -113,6 +113,7 @@ public class Service extends android.app.Service {
     private long mStartTime;
     private Timer timer;
     private WakeLock wakeLock = null;
+    private boolean initiativeClose=false;
 
     // Static method to start the service
     public static void actionStart(Context ctx, String url, String topic, String username, String password) {
@@ -192,7 +193,9 @@ public class Service extends android.app.Service {
     class RemindTask extends TimerTask {
         public void run() {
             System.out.println("timer task running");
-            reconnectIfNecessary();
+            if (client==null||(client != null && !client.isConnected())) {
+                reconnectIfNecessary();
+            }
             timer.schedule(new RemindTask(), 1000 * 5);
         }
     }
@@ -304,11 +307,18 @@ public class Service extends android.app.Service {
 
         if (client != null) {
             try {
-                client.disconnect();
-            } catch (Exception e) {
+//                client.disconnect();
+                initiativeClose=true;
+                timer.cancel();
+                client.disconnectForcibly(3000,1000,true);
+                client.close();
+//                client.unsubscribe()
 
+            } catch (Exception e) {
+                Log.e(TAG, "disconnect error+" + e.getMessage());
             }
             client = null;
+            initiativeClose=false;
         }
     }
 
@@ -414,7 +424,7 @@ public class Service extends android.app.Service {
         if (!"".equals(page) && page != null) {
             i.setAction("NOTI#" + page + "#" + notifyId);
         }
-        PendingIntent pendingIntent =PendingIntent.getActivities(context, notifyId, new Intent[]{i}, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntent = PendingIntent.getActivities(context, notifyId, new Intent[]{i}, PendingIntent.FLAG_UPDATE_CURRENT);
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "heytz");
         builder.setDefaults(Notification.DEFAULT_ALL);
         builder.setSmallIcon(R.mipmap.icon);
@@ -484,17 +494,18 @@ public class Service extends android.app.Service {
             connOpts.setCleanSession(MQTT_CLEAN_START);
             connOpts.setKeepAliveInterval(MQTT_KEEP_ALIVE);
             if (client != null && client.isConnected()) {
-                Log.i("push mqtt","isConnected");
+                Log.i("push mqtt", "isConnected");
+                connected = true;
                 return;
             }
-            Log.e("push mqtt","not connected");
+            Log.e("push mqtt", "not connected");
             client = new MqttAsyncClient(url, clientId, persistence);
             client.setCallback(new MqttCallback() {
                 @Override
                 public void connectionLost(Throwable cause) {
                     connected = false;
                     Log.i("mqttalabs", cause.toString());
-                    if (isNetworkAvailable()) {
+                    if (isNetworkAvailable()&&initiativeClose==false) {
                         reconnectIfNecessary();
                     }
                 }
