@@ -44,7 +44,17 @@ NSString *page;
 // 获得Device Token
 - (void)application:(UIApplication *)application
 didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
-    token=[NSString stringWithFormat:@"%@", deviceToken];
+    if ([[UIDevice currentDevice].systemVersion floatValue] >= 13.0) {
+        NSMutableString *deviceTokenString = [NSMutableString string];
+        const char *bytes = deviceToken.bytes;
+        NSInteger count = deviceToken.length;
+        for (int i = 0; i < count; i++) {
+            [deviceTokenString appendFormat:@"%02x", bytes[i]&0x000000FF];
+        }
+        token=deviceTokenString;
+    }else {
+        token=[NSString stringWithFormat:@"%@", deviceToken];
+    }
     NSLog(@"%@", [NSString stringWithFormat:@"Device Token: %@", deviceToken]);
 }
 // 获得Device Token失败
