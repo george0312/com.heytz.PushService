@@ -5,8 +5,8 @@ module.exports = function (context) {
     fs = context.requireCordovaModule('fs'),
     shell = context.requireCordovaModule('shelljs'),
     projectRoot = context.opts.projectRoot,
-    // ConfigParser = context.requireCordovaModule('cordova-common').ConfigParser,
-    ConfigParser = context.requireCordovaModule('cordova-lib/src/configparser/ConfigParser'),
+    ConfigParser = context.requireCordovaModule('cordova-common').ConfigParser,
+    // ConfigParser = context.requireCordovaModule('cordova-lib/src/configparser/ConfigParser'),
     config = new ConfigParser(path.join(context.opts.projectRoot, "config.xml")),
     packageName = config.android_packageName() || config.packageName();
 
