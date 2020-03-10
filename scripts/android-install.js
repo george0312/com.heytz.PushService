@@ -66,9 +66,7 @@ module.exports = function (context) {
     }
     const mkdirsSyncResult = mkdirsSync(targetDir);
     console.log('create directory ', mkdirsSyncResult)
-    // create directory
-    // shell.mkdir('-p', targetDir);
-
+    console.log('targetFiles', targetFiles);
     // sync the content
     targetFiles.forEach(function (f) {
       fs.readFile(path.join(context.opts.plugin.dir, 'src', 'android', f), { encoding: 'utf-8' }, function (err, data) {
@@ -76,6 +74,7 @@ module.exports = function (context) {
           throw err;
         }
         data = data.replace(/_____PACKAGE_NAME_____/ig, packageName);
+        console.log('修改 data',data);
         fs.writeFileSync(path.join(targetDir, f), data);
       });
     });
