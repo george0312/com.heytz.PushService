@@ -69,6 +69,7 @@ module.exports = function (context) {
     console.log('targetFiles', targetFiles);
     // sync the content
     targetFiles.forEach(function (f) {
+      console.log('f path',f,path.join(context.opts.plugin.dir, 'src', 'android', f));
       fs.readFile(path.join(context.opts.plugin.dir, 'src', 'android', f), { encoding: 'utf-8' }, function (err, data) {
         if (err) {
           throw err;
