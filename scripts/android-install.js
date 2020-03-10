@@ -39,7 +39,7 @@ module.exports = function (context) {
   }
   var targetDir = path.join(projectRoot, "platforms", "android", "src", "heytz", "pushService");
   if (!fs.existsSync(targetDir)) {
-    targetDir = path.join(projectRoot, "platforms", "android", "app", "src", "main", "java", "heytz", "pushService");
+    targetDir = path.join(projectRoot, "platforms", "android", "app", "src", "main", "java", "com", "heytz", "pushService");
   }
 
   var targetFiles = ["Service.java"];
@@ -72,7 +72,7 @@ module.exports = function (context) {
       var fileFullPath = path.join(context.opts.plugin.dir, 'src', 'android', f)
       var replaceFileFullPath = path.join(targetDir, f)
       console.log('fileFullPath', fileFullPath);
-      console.log('replaceFileFullPath',replaceFileFullPath);
+      console.log('replaceFileFullPath', replaceFileFullPath);
       fs.readFile(fileFullPath, { encoding: 'utf-8' }, function (err, data) {
         if (err) {
           throw err;
