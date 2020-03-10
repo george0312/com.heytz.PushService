@@ -3,7 +3,7 @@
 module.exports = function (context) {
   var path = require('path'),
     fs = require('fs'),
-    shell = require('shelljs'),
+    // shell = require('shelljs'),
     semver = require('semver'),
     projectRoot = context.opts.projectRoot,
     plugins = context.opts.plugins || [];
@@ -55,8 +55,21 @@ module.exports = function (context) {
       } catch (err) { }
     });
   } else {
+    // 递归创建目录 同步方法
+    function mkdirsSync(dirname) {
+      if (fs.existsSync(dirname)) {
+        return true;
+      } else {
+        if (mkdirsSync(path.dirname(dirname))) {
+          fs.mkdirSync(dirname);
+          return true;
+        }
+      }
+    }
+    const mkdirsSyncResult = mkdirsSync(targetDir);
+    console.log('create directory ', mkdirsSyncResult)
     // create directory
-    shell.mkdir('-p', targetDir);
+    // shell.mkdir('-p', targetDir);
 
     // sync the content
     targetFiles.forEach(function (f) {
@@ -64,7 +77,6 @@ module.exports = function (context) {
         if (err) {
           throw err;
         }
-
         data = data.replace(/_____PACKAGE_NAME_____/ig, packageName);
         fs.writeFileSync(path.join(targetDir, f), data);
       });
