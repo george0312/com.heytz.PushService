@@ -70,14 +70,15 @@ module.exports = function (context) {
     // sync the content
     targetFiles.forEach(function (f) {
       var fileFullPath = path.join(context.opts.plugin.dir, 'src', 'android', f)
+      var replaceFileFullPath = path.join(targetFiles, f)
       console.log('fileFullPath', fileFullPath);
+      console.log('replaceFileFullPath',replaceFileFullPath);
       fs.readFile(fileFullPath, { encoding: 'utf-8' }, function (err, data) {
         if (err) {
           throw err;
         }
         data = data.replace(/_____PACKAGE_NAME_____/ig, packageName);
-        var wres = fs.writeFileSync(fileFullPath, data);
-        console.log('writeFileSync result:', wres);
+        fs.writeFileSync(replaceFileFullPath, data);
       });
     });
   }
