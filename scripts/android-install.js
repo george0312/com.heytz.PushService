@@ -69,14 +69,15 @@ module.exports = function (context) {
     console.log('targetFiles', targetFiles);
     // sync the content
     targetFiles.forEach(function (f) {
-      console.log('f path',f,path.join(context.opts.plugin.dir, 'src', 'android', f));
-      fs.readFile(path.join(context.opts.plugin.dir, 'src', 'android', f), { encoding: 'utf-8' }, function (err, data) {
+      var fileFullPath = path.join(context.opts.plugin.dir, 'src', 'android', f)
+      console.log('fileFullPath', fileFullPath);
+      fs.readFile(fileFullPath, { encoding: 'utf-8' }, function (err, data) {
         if (err) {
           throw err;
         }
         data = data.replace(/_____PACKAGE_NAME_____/ig, packageName);
-        console.log('修改 data',data);
-        fs.writeFileSync(path.join(targetDir, f), data);
+        var wres = fs.writeFileSync(fileFullPath, data);
+        console.log('writeFileSync result:', wres);
       });
     });
   }
