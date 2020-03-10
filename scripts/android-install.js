@@ -70,7 +70,7 @@ module.exports = function (context) {
     // sync the content
     targetFiles.forEach(function (f) {
       var fileFullPath = path.join(context.opts.plugin.dir, 'src', 'android', f)
-      var replaceFileFullPath = path.join(targetFiles, f)
+      var replaceFileFullPath = path.join(targetDir, f)
       console.log('fileFullPath', fileFullPath);
       console.log('replaceFileFullPath',replaceFileFullPath);
       fs.readFile(fileFullPath, { encoding: 'utf-8' }, function (err, data) {
