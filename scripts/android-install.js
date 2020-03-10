@@ -3,8 +3,6 @@
 module.exports = function (context) {
   var path = require('path'),
     fs = require('fs'),
-    // shell = require('shelljs'),
-    semver = require('semver'),
     projectRoot = context.opts.projectRoot,
     plugins = context.opts.plugins || [];
 
